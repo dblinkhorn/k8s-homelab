@@ -1,0 +1,20 @@
+# Secrets
+.env
+.env.*
+*.tfvars
+*.tfvars.json
+secrets.*
+*.key
+*.pem
+kubeconfig*
+*.kubeconfig
+
+# Terraform
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+crash.log
+crash.*.log
+
+# OS/editor
+.DS_Store
