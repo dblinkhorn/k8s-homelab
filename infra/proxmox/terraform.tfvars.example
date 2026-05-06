@@ -1,0 +1,12 @@
+proxmox_endpoint  = "https://<proxmox-host>:8006/"
+proxmox_api_token = "<user>@<realm>!<token-name>=<token-secret>"
+proxmox_insecure  = true
+
+proxmox_node_name = "<proxmox-node-name>"
+image_datastore_id = "<image-datastore-id>"
+vm_datastore_id    = "<vm-datastore-id>"
+network_bridge     = "<network-bridge-name>"
+
+template_vm_id       = 9000
+template_name        = "ubuntu-2604-cloudinit"
+template_description = "Ubuntu 26.04 LTS cloud-init template"
