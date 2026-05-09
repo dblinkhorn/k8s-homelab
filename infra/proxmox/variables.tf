@@ -35,6 +35,37 @@ variable "network_bridge" {
   description = "Proxmox bridge attached to VM network devices."
 }
 
+variable "vm_username" {
+  type        = string
+  description = "Linux user created by cloud-init on cloned node VMs."
+  default     = "ubuntu"
+}
+
+variable "ssh_public_key_path" {
+  type        = string
+  description = "Path to the SSH public key cloud-init should authorize for VM access."
+  default     = "~/.ssh/id_ed25519.pub"
+}
+
+variable "dns_servers" {
+  type        = list(string)
+  description = "DNS servers configured for cloned node VMs."
+}
+
+variable "kubernetes_nodes" {
+  type = map(object({
+    vm_id        = number
+    role         = string
+    mac_address  = string
+    reserved_ip  = string
+    cpu_cores    = number
+    memory_mb    = number
+    disk_size_gb = number
+  }))
+
+  description = "Kubernetes node VMs cloned from the Ubuntu cloud-init template. reserved_ip documents the DHCP reservation and is not configured as a static IP in the VM."
+}
+
 variable "ubuntu_cloud_image_url" {
   type        = string
   description = "Official Ubuntu cloud image URL used for the base template."

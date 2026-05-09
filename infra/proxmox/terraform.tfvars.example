@@ -3,10 +3,45 @@ proxmox_api_token = "<user>@<realm>!<token-name>=<token-secret>"
 proxmox_insecure  = true
 
 proxmox_node_name = "<proxmox-node-name>"
+
 image_datastore_id = "<image-datastore-id>"
 vm_datastore_id    = "<vm-datastore-id>"
 network_bridge     = "<network-bridge-name>"
 
+dns_servers = ["<dns-server-ip>"]
+
 template_vm_id       = 9000
 template_name        = "ubuntu-2604-cloudinit"
 template_description = "Ubuntu 26.04 LTS cloud-init template"
+
+kubernetes_nodes = {
+  k8s-cp-01 = {
+    vm_id        = 101
+    role         = "control-plane"
+    mac_address  = "02:00:00:00:10:01"
+    reserved_ip  = "<reserved-ip-for-k8s-cp-01>"
+    cpu_cores    = 2
+    memory_mb    = 4096
+    disk_size_gb = 40
+  }
+
+  k8s-worker-01 = {
+    vm_id        = 111
+    role         = "worker"
+    mac_address  = "02:00:00:00:10:11"
+    reserved_ip  = "<reserved-ip-for-k8s-worker-01>"
+    cpu_cores    = 2
+    memory_mb    = 4096
+    disk_size_gb = 40
+  }
+
+  k8s-worker-02 = {
+    vm_id        = 112
+    role         = "worker"
+    mac_address  = "02:00:00:00:10:12"
+    reserved_ip  = "<reserved-ip-for-k8s-worker-02>"
+    cpu_cores    = 2
+    memory_mb    = 4096
+    disk_size_gb = 40
+  }
+}
