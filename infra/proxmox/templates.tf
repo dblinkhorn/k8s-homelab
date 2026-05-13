@@ -1,4 +1,4 @@
-resource "proxmox_virtual_environment_vm" "ubuntu_template" {
+resource "proxmox_virtual_environment_vm" "node_template" {
   vm_id     = var.template_vm_id
   name      = var.template_name
   node_name = var.proxmox_node_name
@@ -21,7 +21,7 @@ resource "proxmox_virtual_environment_vm" "ubuntu_template" {
 
   cpu {
     cores = var.template_cpu_cores
-    type  = var.template_cpu_type
+    type  = var.vm_cpu_type
   }
 
   memory {

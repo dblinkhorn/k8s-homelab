@@ -11,8 +11,8 @@ network_bridge     = "<network-bridge-name>"
 dns_servers = ["<dns-server-ip>"]
 
 template_vm_id       = 9000
-template_name        = "ubuntu-2604-cloudinit"
-template_description = "Ubuntu 26.04 LTS cloud-init template"
+template_name        = "ubuntu-2404-cloudinit"
+template_description = "Ubuntu 24.04 LTS cloud-init template"
 
 kubernetes_nodes = {
   k8s-cp-01 = {

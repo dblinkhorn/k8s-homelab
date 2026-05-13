@@ -17,7 +17,7 @@ resource "proxmox_virtual_environment_vm" "kubernetes_nodes" {
   tablet_device = false
 
   clone {
-    vm_id        = proxmox_virtual_environment_vm.ubuntu_template.vm_id
+    vm_id        = proxmox_virtual_environment_vm.node_template.vm_id
     node_name    = var.proxmox_node_name
     datastore_id = var.vm_datastore_id
     full         = true
@@ -29,7 +29,7 @@ resource "proxmox_virtual_environment_vm" "kubernetes_nodes" {
 
   cpu {
     cores = each.value.cpu_cores
-    type  = var.template_cpu_type
+    type  = var.vm_cpu_type
   }
 
   memory {

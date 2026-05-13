@@ -4,12 +4,12 @@ output "proxmox_version" {
 }
 
 output "proxmox_node_names" {
-  description = "Proxmox node names visible to the Terraform API token."
+  description = "Proxmox node names."
   value       = data.proxmox_virtual_environment_nodes.available.names
 }
 
-output "proxmox_nodes_online" {
-  description = "Online status for Proxmox nodes visible to the Terraform API token."
+output "proxmox_node_online_statuses" {
+  description = "Online status for Proxmox nodes."
   value       = data.proxmox_virtual_environment_nodes.available.online
 }
 
@@ -18,9 +18,9 @@ output "ubuntu_cloud_image_file_id" {
   value       = proxmox_download_file.ubuntu_cloud_image.id
 }
 
-output "ubuntu_template_vm_id" {
-  description = "VMID of the Ubuntu cloud-init template."
-  value       = proxmox_virtual_environment_vm.ubuntu_template.vm_id
+output "node_template_vm_id" {
+  description = "VMID of the node VM template."
+  value       = proxmox_virtual_environment_vm.node_template.vm_id
 }
 
 output "kubernetes_node_reservations" {

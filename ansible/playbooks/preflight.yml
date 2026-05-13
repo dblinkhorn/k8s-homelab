@@ -1,0 +1,91 @@
+---
+- name: Verify base VM readiness
+  hosts: k8s_nodes
+  gather_facts: false
+  tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 60
+
+    - name: Wait for cloud-init to finish
+      ansible.builtin.command: cloud-init status --wait --format json
+      changed_when: false
+      failed_when: false
+      register: cloud_init_status_raw
+
+    - name: Parse cloud-init status
+      ansible.builtin.set_fact:
+        cloud_init_status: "{{ cloud_init_status_raw.stdout | from_json }}"
+
+    - name: Verify cloud-init completed without hard errors
+      ansible.builtin.assert:
+        that:
+          - cloud_init_status.status == "done"
+          - cloud_init_status.errors | length == 0
+        fail_msg: "cloud-init did not complete cleanly on {{ inventory_hostname }}: {{ cloud_init_status_raw.stdout }}"
+
+    - name: Gather minimal facts
+      ansible.builtin.setup:
+        gather_subset:
+          - min
+
+    - name: Verify hostname matches inventory
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.hostname == inventory_hostname
+        fail_msg: "Expected hostname {{ inventory_hostname }}, got {{ ansible_facts.hostname }}."
+
+    - name: Read assigned IP addresses
+      ansible.builtin.command: hostname -I
+      changed_when: false
+      register: node_ip_addresses
+
+    - name: Verify node has the expected reserved IP
+      ansible.builtin.assert:
+        that:
+          - ansible_host in node_ip_addresses.stdout.split()
+        fail_msg: "Expected {{ inventory_hostname }} to have IP {{ ansible_host }}, got {{ node_ip_addresses.stdout }}."
+
+    - name: Verify passwordless sudo
+      ansible.builtin.command: id -u
+      become: true
+      changed_when: false
+      register: sudo_user_id
+
+    - name: Confirm sudo reached root
+      ansible.builtin.assert:
+        that:
+          - sudo_user_id.stdout == "0"
+        fail_msg: "Passwordless sudo did not reach root on {{ inventory_hostname }}."
+
+    - name: Verify DNS resolution
+      ansible.builtin.command: getent hosts kubernetes.io
+      changed_when: false
+
+    - name: Verify SSH service is active
+      ansible.builtin.command: systemctl is-active ssh
+      changed_when: false
+      register: ssh_service_status
+
+    - name: Confirm SSH service is active
+      ansible.builtin.assert:
+        that:
+          - ssh_service_status.stdout == "active"
+        fail_msg: "SSH service is not active on {{ inventory_hostname }}."
+
+- name: Verify control plane can reach workers
+  hosts: k8s_control_plane
+  gather_facts: false
+  tasks:
+    - name: Ping worker nodes from control plane
+      ansible.builtin.command: "ping -c 2 -W 2 {{ hostvars[item].ansible_host }}"
+      changed_when: false
+      loop: "{{ groups['k8s_workers'] }}"
+
+- name: Verify workers can reach control plane
+  hosts: k8s_workers
+  gather_facts: false
+  tasks:
+    - name: Ping control-plane node from workers
+      ansible.builtin.command: "ping -c 2 -W 2 {{ hostvars[groups['k8s_control_plane'][0]].ansible_host }}"
+      changed_when: false

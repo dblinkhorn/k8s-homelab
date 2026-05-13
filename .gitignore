@@ -16,5 +16,10 @@ terraform.tfstate.*
 crash.log
 crash.*.log
 
+# Ansible
+ansible/.ansible/
+ansible/inventory/*.ini
+*.retry
+
 # OS/editor
 .DS_Store
