@@ -1,0 +1,17 @@
+---
+- name: Wait for cloud-init to finish
+  ansible.builtin.command: cloud-init status --wait --format json
+  changed_when: false
+  failed_when: false
+  register: cloud_init_status_raw
+
+- name: Parse cloud-init status
+  ansible.builtin.set_fact:
+    cloud_init_status: "{{ cloud_init_status_raw.stdout | from_json }}"
+
+- name: Verify cloud-init completed without hard errors
+  ansible.builtin.assert:
+    that:
+      - cloud_init_status.status == "done"
+      - cloud_init_status.errors | length == 0
+    fail_msg: "cloud-init did not complete cleanly on {{ inventory_hostname }}: {{ cloud_init_status_raw.stdout }}"

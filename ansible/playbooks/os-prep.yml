@@ -1,0 +1,99 @@
+---
+- name: Prepare base OS for Kubernetes
+  hosts: k8s_nodes
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Wait for SSH
+      ansible.builtin.wait_for_connection:
+        timeout: 60
+
+    - name: Verify cloud-init finished
+      ansible.builtin.import_tasks: ../tasks/wait-cloud-init.yml
+
+    - name: Install QEMU guest agent
+      ansible.builtin.apt:
+        name: qemu-guest-agent
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Check active swap
+      ansible.builtin.command: swapon --show --noheadings
+      changed_when: false
+      register: active_swap_before
+
+    - name: Disable active swap
+      ansible.builtin.command: swapoff -a
+      when: active_swap_before.stdout != ""
+
+    - name: List systemd swap units
+      ansible.builtin.command: systemctl list-unit-files --type=swap --no-legend --no-pager
+      changed_when: false
+      failed_when: systemd_swap_units_raw.rc not in [0, 1]
+      register: systemd_swap_units_raw
+
+    - name: Disable systemd swap units
+      ansible.builtin.systemd_service:
+        name: "{{ item.split()[0] }}"
+        enabled: false
+        masked: true
+        state: stopped
+      loop: "{{ systemd_swap_units_raw.stdout_lines }}"
+      when:
+        - item.split() | length >= 2
+        - item.split()[1] not in ["disabled", "masked"]
+
+    - name: Remove persistent swap entries from fstab
+      ansible.builtin.replace:
+        path: /etc/fstab
+        regexp: '^([^#]\S+\s+\S+\s+swap\s+\S+.*)$'
+        replace: '# \1'
+        backup: true
+
+    - name: Persist Kubernetes sysctl settings
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/99-kubernetes.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          net.ipv4.ip_forward = 1
+      register: kubernetes_sysctl_config
+
+    - name: Apply Kubernetes sysctl settings
+      ansible.builtin.command: sysctl --system
+      when: kubernetes_sysctl_config.changed
+
+    - name: Verify no active swap remains
+      ansible.builtin.command: swapon --show --noheadings
+      changed_when: false
+      register: active_swap
+
+    - name: Confirm swap is disabled
+      ansible.builtin.assert:
+        that:
+          - active_swap.stdout == ""
+        fail_msg: "Active swap remains on {{ inventory_hostname }}: {{ active_swap.stdout }}"
+
+    - name: Read IPv4 forwarding setting
+      ansible.builtin.command: sysctl -n net.ipv4.ip_forward
+      changed_when: false
+      register: ip_forward
+
+    - name: Confirm IPv4 forwarding is enabled
+      ansible.builtin.assert:
+        that:
+          - ip_forward.stdout == "1"
+        fail_msg: "net.ipv4.ip_forward is {{ ip_forward.stdout }} on {{ inventory_hostname }}."
+
+    - name: Verify QEMU guest agent package is installed
+      ansible.builtin.command: dpkg-query -W -f=${Status} qemu-guest-agent
+      changed_when: false
+      register: qemu_guest_agent_package
+
+    - name: Confirm QEMU guest agent package is installed
+      ansible.builtin.assert:
+        that:
+          - qemu_guest_agent_package.stdout == "install ok installed"
+        fail_msg: "qemu-guest-agent is not installed on {{ inventory_hostname }}."

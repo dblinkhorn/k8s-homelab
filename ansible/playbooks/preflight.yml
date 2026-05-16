@@ -2,27 +2,14 @@
 - name: Verify base VM readiness
   hosts: k8s_nodes
   gather_facts: false
+  strategy: linear
   tasks:
     - name: Wait for SSH
       ansible.builtin.wait_for_connection:
         timeout: 60
 
-    - name: Wait for cloud-init to finish
-      ansible.builtin.command: cloud-init status --wait --format json
-      changed_when: false
-      failed_when: false
-      register: cloud_init_status_raw
-
-    - name: Parse cloud-init status
-      ansible.builtin.set_fact:
-        cloud_init_status: "{{ cloud_init_status_raw.stdout | from_json }}"
-
-    - name: Verify cloud-init completed without hard errors
-      ansible.builtin.assert:
-        that:
-          - cloud_init_status.status == "done"
-          - cloud_init_status.errors | length == 0
-        fail_msg: "cloud-init did not complete cleanly on {{ inventory_hostname }}: {{ cloud_init_status_raw.stdout }}"
+    - name: Verify cloud-init finished
+      ansible.builtin.import_tasks: ../tasks/wait-cloud-init.yml
 
     - name: Gather minimal facts
       ansible.builtin.setup:
@@ -57,6 +44,21 @@
         that:
           - sudo_user_id.stdout == "0"
         fail_msg: "Passwordless sudo did not reach root on {{ inventory_hostname }}."
+
+    - name: Read product UUID
+      ansible.builtin.command: cat /sys/class/dmi/id/product_uuid
+      become: true
+      changed_when: false
+      register: node_product_uuid
+
+    - name: Verify node product UUIDs are unique
+      ansible.builtin.assert:
+        that:
+          - product_uuids | unique | length == product_uuids | length
+        fail_msg: "Kubernetes nodes must have unique product UUIDs: {{ product_uuids }}"
+      run_once: true
+      vars:
+        product_uuids: "{{ groups['k8s_nodes'] | map('extract', hostvars, 'node_product_uuid') | map(attribute='stdout') | list }}"
 
     - name: Verify DNS resolution
       ansible.builtin.command: getent hosts kubernetes.io
