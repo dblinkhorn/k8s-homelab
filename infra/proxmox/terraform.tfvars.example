@@ -10,6 +10,8 @@ network_bridge     = "<network-bridge-name>"
 
 dns_servers = ["<dns-server-ip>"]
 
+qemu_guest_agent_enabled = false
+
 template_vm_id       = 9000
 template_name        = "ubuntu-2404-cloudinit"
 template_description = "Ubuntu 24.04 LTS cloud-init template"

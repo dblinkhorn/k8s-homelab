@@ -24,7 +24,7 @@ resource "proxmox_virtual_environment_vm" "kubernetes_nodes" {
   }
 
   agent {
-    enabled = false
+    enabled = var.qemu_guest_agent_enabled
   }
 
   cpu {

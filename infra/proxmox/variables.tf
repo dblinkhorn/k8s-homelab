@@ -52,6 +52,12 @@ variable "dns_servers" {
   description = "DNS servers configured for cloned node VMs."
 }
 
+variable "qemu_guest_agent_enabled" {
+  type        = bool
+  description = "Enable the Proxmox QEMU guest agent channel for node VMs after qemu-guest-agent is installed in the guest OS."
+  default     = false
+}
+
 variable "kubernetes_nodes" {
   type = map(object({
     vm_id        = number
