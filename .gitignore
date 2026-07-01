@@ -21,5 +21,9 @@ ansible/.ansible/
 ansible/inventory/*.ini
 *.retry
 
+# Agent
+plan.md
+scratchpad.md
+
 # OS/editor
 .DS_Store

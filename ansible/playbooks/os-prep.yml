@@ -87,7 +87,7 @@
           - ip_forward.stdout == "1"
         fail_msg: "net.ipv4.ip_forward is {{ ip_forward.stdout }} on {{ inventory_hostname }}."
 
-    - name: Verify QEMU guest agent package is installed
+    - name: Read QEMU guest agent package status
       ansible.builtin.command: dpkg-query -W -f=${Status} qemu-guest-agent
       changed_when: false
       register: qemu_guest_agent_package

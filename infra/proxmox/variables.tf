@@ -75,13 +75,19 @@ variable "kubernetes_nodes" {
 variable "ubuntu_cloud_image_url" {
   type        = string
   description = "URL of the Ubuntu cloud image used for the base template."
-  default     = "https://cloud-images.ubuntu.com/noble/current/noble-server-cloudimg-amd64.img"
+  default     = "https://cloud-images.ubuntu.com/releases/noble/release-20260518/ubuntu-24.04-server-cloudimg-amd64.img"
 }
 
-variable "ubuntu_cloud_image_file_name" {
+variable "ubuntu_cloud_image_checksum" {
   type        = string
-  description = "File name Proxmox should use for the downloaded Ubuntu cloud image. Ubuntu .img cloud images are qcow2 files, so use a .qcow2 suffix for import."
-  default     = "noble-server-cloudimg-amd64.qcow2"
+  description = "SHA256 checksum for the pinned Ubuntu cloud image."
+  default     = "53fdde898feed8b027d94baa9cfe8229867f330a1d9c49dc7d84465ee7f229f7"
+}
+
+variable "ubuntu_cloud_image_file_name_override" {
+  type        = string
+  description = "Optional Proxmox datastore file name for custom cloud image URLs. Leave null to derive a name from ubuntu_cloud_image_url."
+  default     = null
 }
 
 variable "template_vm_id" {
