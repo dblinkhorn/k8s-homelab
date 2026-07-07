@@ -1,0 +1,9 @@
+---
+- name: Run base VM preflight checks
+  ansible.builtin.import_playbook: preflight.yml
+
+- name: Prepare base operating system
+  ansible.builtin.import_playbook: os-prep.yml
+
+- name: Prepare Kubernetes node prerequisites
+  ansible.builtin.import_playbook: kubernetes-prereqs.yml

@@ -1,0 +1,193 @@
+---
+- name: Prepare nodes for kubeadm
+  hosts: k8s_nodes
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Verify Debian-family operating system
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.os_family == "Debian"
+        fail_msg: "This playbook currently supports Debian-family nodes only."
+
+    - name: Install base Kubernetes prerequisites
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - containerd
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+    - name: Configure required kernel modules to load at boot
+      ansible.builtin.copy:
+        dest: /etc/modules-load.d/k8s.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Load required kernel modules
+      ansible.builtin.command: "modprobe {{ item }}"
+      changed_when: false
+      loop:
+        - overlay
+        - br_netfilter
+
+    - name: Configure Kubernetes network sysctl settings
+      ansible.builtin.copy:
+        dest: /etc/sysctl.d/kubernetes.conf
+        owner: root
+        group: root
+        mode: "0644"
+        content: |
+          net.bridge.bridge-nf-call-iptables = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+          net.ipv4.ip_forward = 1
+      register: kubernetes_sysctl_config
+
+    - name: Apply Kubernetes network sysctl settings
+      ansible.builtin.command: sysctl --system
+      when: kubernetes_sysctl_config.changed
+
+    - name: Ensure containerd config directory exists
+      ansible.builtin.file:
+        path: /etc/containerd
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Check containerd config
+      ansible.builtin.stat:
+        path: /etc/containerd/config.toml
+      register: containerd_config_file
+
+    - name: Generate default containerd config
+      ansible.builtin.command: containerd config default
+      changed_when: false
+      register: containerd_default_config
+      when: not containerd_config_file.stat.exists
+
+    - name: Write default containerd config
+      ansible.builtin.copy:
+        dest: /etc/containerd/config.toml
+        owner: root
+        group: root
+        mode: "0644"
+        content: "{{ containerd_default_config.stdout }}"
+      when: not containerd_config_file.stat.exists
+      notify: Restart containerd
+
+    - name: Enable systemd cgroups for containerd
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: '^(\s*)SystemdCgroup = false$'
+        replace: '\1SystemdCgroup = true'
+      notify: Restart containerd
+
+    - name: Ensure containerd CRI plugin is not disabled
+      ansible.builtin.replace:
+        path: /etc/containerd/config.toml
+        regexp: '^disabled_plugins = \["cri"\]$'
+        replace: 'disabled_plugins = []'
+      notify: Restart containerd
+
+    - name: Enable and start containerd
+      ansible.builtin.systemd_service:
+        name: containerd
+        enabled: true
+        state: started
+
+    - name: Flush containerd handlers
+      ansible.builtin.meta: flush_handlers
+
+    - name: Configure Kubernetes apt repository
+      ansible.builtin.deb822_repository:
+        name: kubernetes
+        types: deb
+        uris: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_package_repo_version }}/deb/"
+        suites: /
+        signed_by: "https://pkgs.k8s.io/core:/stable:/{{ kubernetes_package_repo_version }}/deb/Release.key"
+        state: present
+        install_python_debian: true
+
+    - name: Build Kubernetes package install list
+      ansible.builtin.set_fact:
+        kubernetes_package_install_names: >-
+          {{
+            kubernetes_packages
+            if kubernetes_package_version | length == 0
+            else kubernetes_packages | map('regex_replace', '$', '=' ~ kubernetes_package_version) | list
+          }}
+
+    - name: Install Kubernetes packages
+      ansible.builtin.apt:
+        name: "{{ kubernetes_package_install_names }}"
+        state: present
+        update_cache: true
+
+    - name: Hold Kubernetes packages
+      ansible.builtin.command: "apt-mark hold {{ item }}"
+      register: kubernetes_package_hold
+      changed_when: "'was already set on hold' not in kubernetes_package_hold.stdout"
+      loop: "{{ kubernetes_packages }}"
+
+    - name: Enable kubelet service
+      ansible.builtin.systemd_service:
+        name: kubelet
+        enabled: true
+
+    - name: Verify containerd service is active
+      ansible.builtin.command: systemctl is-active --quiet containerd
+      changed_when: false
+
+    - name: Verify containerd CRI socket is available
+      ansible.builtin.stat:
+        path: "{{ kubernetes_cri_socket | regex_replace('^unix://', '') }}"
+      register: containerd_cri_socket
+      failed_when: not containerd_cri_socket.stat.exists or not containerd_cri_socket.stat.issock
+
+    - name: Verify containerd runtime through CRI
+      ansible.builtin.command: "crictl --runtime-endpoint {{ kubernetes_cri_socket }} info"
+      changed_when: false
+
+    - name: Verify kubeadm command
+      ansible.builtin.command: kubeadm version
+      changed_when: false
+
+    - name: Verify kubectl client command
+      ansible.builtin.command: kubectl version --client=true
+      changed_when: false
+
+    - name: Verify kubelet package
+      ansible.builtin.command: kubelet --version
+      changed_when: false
+
+    - name: Verify no active swap remains
+      ansible.builtin.command: swapon --show --noheadings
+      changed_when: false
+      register: active_swap
+      failed_when: active_swap.stdout != ""
+
+    - name: Verify Kubernetes network sysctls
+      ansible.builtin.command: "sysctl -n {{ item.name }}"
+      changed_when: false
+      register: kubernetes_sysctl_values
+      failed_when: kubernetes_sysctl_values.stdout != item.value
+      loop:
+        - name: net.bridge.bridge-nf-call-iptables
+          value: "1"
+        - name: net.bridge.bridge-nf-call-ip6tables
+          value: "1"
+        - name: net.ipv4.ip_forward
+          value: "1"
+
+  handlers:
+    - name: Restart containerd
+      ansible.builtin.systemd_service:
+        name: containerd
+        state: restarted

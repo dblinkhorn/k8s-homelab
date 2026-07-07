@@ -51,20 +51,6 @@
         replace: '# \1'
         backup: true
 
-    - name: Persist Kubernetes sysctl settings
-      ansible.builtin.copy:
-        dest: /etc/sysctl.d/99-kubernetes.conf
-        owner: root
-        group: root
-        mode: "0644"
-        content: |
-          net.ipv4.ip_forward = 1
-      register: kubernetes_sysctl_config
-
-    - name: Apply Kubernetes sysctl settings
-      ansible.builtin.command: sysctl --system
-      when: kubernetes_sysctl_config.changed
-
     - name: Verify no active swap remains
       ansible.builtin.command: swapon --show --noheadings
       changed_when: false
@@ -75,17 +61,6 @@
         that:
           - active_swap.stdout == ""
         fail_msg: "Active swap remains on {{ inventory_hostname }}: {{ active_swap.stdout }}"
-
-    - name: Read IPv4 forwarding setting
-      ansible.builtin.command: sysctl -n net.ipv4.ip_forward
-      changed_when: false
-      register: ip_forward
-
-    - name: Confirm IPv4 forwarding is enabled
-      ansible.builtin.assert:
-        that:
-          - ip_forward.stdout == "1"
-        fail_msg: "net.ipv4.ip_forward is {{ ip_forward.stdout }} on {{ inventory_hostname }}."
 
     - name: Read QEMU guest agent package status
       ansible.builtin.command: dpkg-query -W -f=${Status} qemu-guest-agent
