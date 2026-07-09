@@ -1,0 +1,161 @@
+---
+- name: Initialize Kubernetes control plane
+  hosts: k8s_control_plane
+  become: true
+  gather_facts: true
+  tasks:
+    - name: Check kubeadm control-plane state
+      ansible.builtin.stat:
+        path: /etc/kubernetes/admin.conf
+      register: kubeadm_admin_conf
+
+    - name: Read kubeadm version
+      ansible.builtin.command: kubeadm version -o short
+      changed_when: false
+      register: kubeadm_version
+
+    - name: Render kubeadm init config
+      ansible.builtin.template:
+        src: ../templates/kubeadm-init-config.yaml.j2
+        dest: /etc/kubernetes/kubeadm-init.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Initialize Kubernetes control plane
+      ansible.builtin.command: kubeadm init --config /etc/kubernetes/kubeadm-init.yaml
+      when: not kubeadm_admin_conf.stat.exists
+
+    - name: Ensure Kubernetes admin kubeconfig directory exists
+      ansible.builtin.file:
+        path: "/home/{{ kubernetes_admin_user }}/.kube"
+        state: directory
+        owner: "{{ kubernetes_admin_user }}"
+        group: "{{ kubernetes_admin_user }}"
+        mode: "0750"
+
+    - name: Configure Kubernetes admin kubeconfig
+      ansible.builtin.copy:
+        src: /etc/kubernetes/admin.conf
+        dest: "/home/{{ kubernetes_admin_user }}/.kube/config"
+        owner: "{{ kubernetes_admin_user }}"
+        group: "{{ kubernetes_admin_user }}"
+        mode: "0600"
+        remote_src: true
+
+    - name: Generate kubeadm worker join command
+      ansible.builtin.command: kubeadm token create --print-join-command --ttl 1h
+      changed_when: false
+      register: kubeadm_join_command
+
+- name: Join Kubernetes worker nodes
+  hosts: k8s_workers
+  become: true
+  gather_facts: false
+  tasks:
+    - name: Check kubeadm worker join state
+      ansible.builtin.stat:
+        path: /etc/kubernetes/kubelet.conf
+      register: kubeadm_kubelet_conf
+
+    - name: Join worker to Kubernetes cluster
+      ansible.builtin.command: >-
+        {{ hostvars[groups['k8s_control_plane'][0]].kubeadm_join_command.stdout }}
+        --cri-socket {{ kubernetes_cri_socket }}
+      when: not kubeadm_kubelet_conf.stat.exists
+
+- name: Install Cilium and validate cluster
+  hosts: k8s_control_plane
+  become: true
+  gather_facts: true
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  tasks:
+    - name: Map Helm architecture
+      ansible.builtin.set_fact:
+        helm_architecture: >-
+          {{
+            {
+              'x86_64': 'amd64',
+              'aarch64': 'arm64'
+            }[ansible_facts.architecture]
+          }}
+
+    - name: Download Helm archive
+      ansible.builtin.get_url:
+        url: "https://get.helm.sh/helm-{{ helm_version }}-linux-{{ helm_architecture }}.tar.gz"
+        dest: "/tmp/helm-{{ helm_version }}-linux-{{ helm_architecture }}.tar.gz"
+        mode: "0644"
+        checksum: "sha256:{{ helm_checksums[helm_architecture] }}"
+
+    - name: Ensure Helm extract directory exists
+      ansible.builtin.file:
+        path: "/tmp/helm-{{ helm_version }}"
+        state: directory
+        owner: root
+        group: root
+        mode: "0755"
+
+    - name: Extract Helm archive
+      ansible.builtin.unarchive:
+        src: "/tmp/helm-{{ helm_version }}-linux-{{ helm_architecture }}.tar.gz"
+        dest: "/tmp/helm-{{ helm_version }}"
+        remote_src: true
+        creates: "/tmp/helm-{{ helm_version }}/linux-{{ helm_architecture }}/helm"
+
+    - name: Install Helm binary
+      ansible.builtin.copy:
+        src: "/tmp/helm-{{ helm_version }}/linux-{{ helm_architecture }}/helm"
+        dest: /usr/local/bin/helm
+        owner: root
+        group: root
+        mode: "0755"
+        remote_src: true
+
+    - name: Render Cilium Helm values
+      ansible.builtin.template:
+        src: ../templates/cilium-values.yaml.j2
+        dest: /etc/kubernetes/cilium-values.yaml
+        owner: root
+        group: root
+        mode: "0600"
+
+    - name: Check Cilium Helm release
+      ansible.builtin.command: helm status cilium --namespace kube-system
+      changed_when: false
+      failed_when: false
+      register: cilium_helm_status
+
+    - name: Install Cilium with Helm
+      ansible.builtin.command: >-
+        helm upgrade --install cilium oci://quay.io/cilium/charts/cilium
+        --version {{ cilium_version }}
+        --namespace kube-system
+        --values /etc/kubernetes/cilium-values.yaml
+        --wait
+        --timeout 5m
+      when: cilium_helm_status.rc != 0
+
+    - name: Verify Cilium release
+      ansible.builtin.command: helm status cilium --namespace kube-system
+      changed_when: false
+
+    - name: Wait for Cilium DaemonSet
+      ansible.builtin.command: kubectl -n kube-system rollout status daemonset/cilium --timeout=300s
+      changed_when: false
+
+    - name: Wait for Cilium operator
+      ansible.builtin.command: kubectl -n kube-system rollout status deployment/cilium-operator --timeout=300s
+      changed_when: false
+
+    - name: Wait for CoreDNS
+      ansible.builtin.command: kubectl -n kube-system rollout status deployment/coredns --timeout=300s
+      changed_when: false
+
+    - name: Verify kube-proxy remains enabled
+      ansible.builtin.command: kubectl -n kube-system rollout status daemonset/kube-proxy --timeout=300s
+      changed_when: false
+
+    - name: Wait for Kubernetes nodes to become ready
+      ansible.builtin.command: kubectl wait --for=condition=Ready nodes --all --timeout=300s
+      changed_when: false

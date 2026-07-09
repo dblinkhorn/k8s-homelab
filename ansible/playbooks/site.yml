@@ -7,3 +7,6 @@
 
 - name: Prepare Kubernetes node prerequisites
   ansible.builtin.import_playbook: kubernetes-prereqs.yml
+
+- name: Bootstrap Kubernetes cluster
+  ansible.builtin.import_playbook: kubernetes-bootstrap.yml
