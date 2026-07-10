@@ -12,6 +12,8 @@ dns_servers = ["<dns-server-ip>"]
 
 qemu_guest_agent_enabled = false
 
+# The default image is pinned to a specific Ubuntu 24.04 release artifact.
+# Change both the URL and checksum together if you intentionally move to a newer image.
 ubuntu_cloud_image_url      = "https://cloud-images.ubuntu.com/releases/noble/release-20260518/ubuntu-24.04-server-cloudimg-amd64.img"
 ubuntu_cloud_image_checksum = "53fdde898feed8b027d94baa9cfe8229867f330a1d9c49dc7d84465ee7f229f7"
 # ubuntu_cloud_image_file_name_override = "custom-image.qcow2"
@@ -20,6 +22,10 @@ template_vm_id       = 9000
 template_name        = "ubuntu-2404-cloudinit"
 template_description = "Ubuntu 24.04 LTS cloud-init template"
 
+# Supported cluster shape: exactly one control-plane node and one or more workers.
+# To change worker count, add or remove worker entries here and in ansible/inventory/homelab.ini.
+# Set DHCP reservations for these MAC addresses, or otherwise ensure each node gets its reserved_ip.
+# CPU, memory, and disk are intentionally configurable per node.
 kubernetes_nodes = {
   k8s-cp-01 = {
     vm_id        = 101

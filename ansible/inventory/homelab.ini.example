@@ -1,6 +1,8 @@
 [k8s_control_plane]
 k8s-cp-01 ansible_host=<control-plane-ip>
 
+# Add or remove worker hosts here to match infra/proxmox/terraform.tfvars.
+# This repo supports one or more workers.
 [k8s_workers]
 k8s-worker-01 ansible_host=<worker-01-ip>
 k8s-worker-02 ansible_host=<worker-02-ip>

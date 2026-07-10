@@ -1,4 +1,15 @@
 ---
+- name: Verify Kubernetes inventory shape
+  hosts: k8s_control_plane[0]
+  gather_facts: false
+  tasks:
+    - name: Confirm supported cluster shape
+      ansible.builtin.assert:
+        that:
+          - groups['k8s_control_plane'] | length == 1
+          - groups['k8s_workers'] | length >= 1
+        fail_msg: "This repo currently supports exactly one control-plane node and at least one worker node."
+
 - name: Verify base VM readiness
   hosts: k8s_nodes
   gather_facts: false
