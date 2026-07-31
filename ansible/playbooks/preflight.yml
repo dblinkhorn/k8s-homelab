@@ -27,6 +27,14 @@
         gather_subset:
           - min
 
+    - name: Verify supported CPU architecture
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.architecture == "x86_64"
+        fail_msg: >-
+          This project supports amd64 Kubernetes nodes only; {{
+          inventory_hostname }} reports {{ ansible_facts.architecture }}.
+
     - name: Verify hostname matches inventory
       ansible.builtin.assert:
         that:

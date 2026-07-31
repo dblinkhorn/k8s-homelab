@@ -22,6 +22,7 @@ ansible/inventory/*.ini
 *.retry
 
 # Agent
+AGENTS.md
 plan.md
 scratchpad.md
 

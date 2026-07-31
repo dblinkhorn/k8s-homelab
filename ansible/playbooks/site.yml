@@ -10,3 +10,6 @@
 
 - name: Bootstrap Kubernetes cluster
   ansible.builtin.import_playbook: kubernetes-bootstrap.yml
+
+- name: Bootstrap Flux
+  ansible.builtin.import_playbook: flux-bootstrap.yml
