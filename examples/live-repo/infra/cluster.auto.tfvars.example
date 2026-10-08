@@ -1,0 +1,35 @@
+proxmox_endpoint = "https://<proxmox-host>:8006/"
+proxmox_node_name = "<proxmox-node-name>"
+
+image_datastore_id = "<image-datastore-id>"
+vm_datastore_id    = "<vm-datastore-id>"
+
+dns_servers = ["<dns-server-ip>"]
+
+# Defaults: vmbr0 bridge, ~/.ssh/id_ed25519.pub, template VM 9000,
+# and 2 CPUs / 4096 MiB RAM / 40 GiB disk per node.
+# Confirm the template and node VM IDs are unused in your Proxmox environment.
+# Configure DHCP reservations for these MAC/IP pairs before provisioning.
+# Add or remove worker entries here; Ansible inventory is generated automatically.
+kubernetes_nodes = {
+  k8s-cp-01 = {
+    vm_id        = 101
+    role         = "control-plane"
+    mac_address  = "02:00:00:00:10:01"
+    reserved_ip  = "<reserved-ip-for-k8s-cp-01>"
+  }
+
+  k8s-worker-01 = {
+    vm_id        = 111
+    role         = "worker"
+    mac_address  = "02:00:00:00:10:11"
+    reserved_ip  = "<reserved-ip-for-k8s-worker-01>"
+  }
+
+  k8s-worker-02 = {
+    vm_id        = 112
+    role         = "worker"
+    mac_address  = "02:00:00:00:10:12"
+    reserved_ip  = "<reserved-ip-for-k8s-worker-02>"
+  }
+}

@@ -1,0 +1,44 @@
+---
+- name: Check kubeadm control-plane state
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubeadm_admin_conf
+
+- name: Read kubeadm version
+  ansible.builtin.command: kubeadm version -o short
+  changed_when: false
+  register: kubeadm_version
+
+- name: Render kubeadm init config
+  ansible.builtin.template:
+    src: kubeadm-init-config.yaml.j2
+    dest: /etc/kubernetes/kubeadm-init.yaml
+    owner: root
+    group: root
+    mode: "0600"
+
+- name: Initialize Kubernetes control plane
+  ansible.builtin.command: kubeadm init --config /etc/kubernetes/kubeadm-init.yaml
+  when: not kubeadm_admin_conf.stat.exists
+
+- name: Ensure Kubernetes admin kubeconfig directory exists
+  ansible.builtin.file:
+    path: "/home/{{ kubernetes_admin_user }}/.kube"
+    state: directory
+    owner: "{{ kubernetes_admin_user }}"
+    group: "{{ kubernetes_admin_user }}"
+    mode: "0750"
+
+- name: Configure Kubernetes admin kubeconfig
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/home/{{ kubernetes_admin_user }}/.kube/config"
+    owner: "{{ kubernetes_admin_user }}"
+    group: "{{ kubernetes_admin_user }}"
+    mode: "0600"
+    remote_src: true
+
+- name: Generate kubeadm worker join command
+  ansible.builtin.command: kubeadm token create --print-join-command --ttl 1h
+  changed_when: false
+  register: kubeadm_join_command

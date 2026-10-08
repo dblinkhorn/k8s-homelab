@@ -1,0 +1,10 @@
+---
+kubernetes_package_repo_version: v1.36
+kubernetes_package_version: ""
+kubernetes_packages:
+  - cri-tools
+  - kubelet
+  - kubeadm
+  - kubectl
+
+kubernetes_cri_socket: unix:///run/containerd/containerd.sock

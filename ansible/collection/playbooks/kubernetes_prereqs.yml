@@ -1,0 +1,7 @@
+---
+- name: Prepare nodes for kubeadm
+  hosts: k8s_nodes
+  become: true
+  gather_facts: true
+  roles:
+    - role: dblinkhorn.k8s_homelab.kubernetes_prereqs

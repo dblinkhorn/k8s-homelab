@@ -1,0 +1,70 @@
+---
+- name: Wait for SSH
+  ansible.builtin.wait_for_connection:
+    timeout: 60
+
+- name: Verify cloud-init finished
+  ansible.builtin.include_role:
+    name: dblinkhorn.k8s_homelab.cloud_init
+
+- name: Install QEMU guest agent
+  ansible.builtin.apt:
+    name: qemu-guest-agent
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check active swap
+  ansible.builtin.command: swapon --show --noheadings
+  changed_when: false
+  register: active_swap_before
+
+- name: Disable active swap
+  ansible.builtin.command: swapoff -a
+  when: active_swap_before.stdout != ""
+
+- name: List systemd swap units
+  ansible.builtin.command: systemctl list-unit-files --type=swap --no-legend --no-pager
+  changed_when: false
+  failed_when: systemd_swap_units_raw.rc not in [0, 1]
+  register: systemd_swap_units_raw
+
+- name: Disable systemd swap units
+  ansible.builtin.systemd_service:
+    name: "{{ item.split()[0] }}"
+    enabled: false
+    masked: true
+    state: stopped
+  loop: "{{ systemd_swap_units_raw.stdout_lines }}"
+  when:
+    - item.split() | length >= 2
+    - item.split()[1] not in ["disabled", "masked"]
+
+- name: Remove persistent swap entries from fstab
+  ansible.builtin.replace:
+    path: /etc/fstab
+    regexp: '^([^#]\S+\s+\S+\s+swap\s+\S+.*)$'
+    replace: '# \1'
+    backup: true
+
+- name: Verify no active swap remains
+  ansible.builtin.command: swapon --show --noheadings
+  changed_when: false
+  register: active_swap
+
+- name: Confirm swap is disabled
+  ansible.builtin.assert:
+    that:
+      - active_swap.stdout == ""
+    fail_msg: "Active swap remains on {{ inventory_hostname }}: {{ active_swap.stdout }}"
+
+- name: Read QEMU guest agent package status
+  ansible.builtin.command: dpkg-query -W -f=${Status} qemu-guest-agent
+  changed_when: false
+  register: qemu_guest_agent_package
+
+- name: Confirm QEMU guest agent package is installed
+  ansible.builtin.assert:
+    that:
+      - qemu_guest_agent_package.stdout == "install ok installed"
+    fail_msg: "qemu-guest-agent is not installed on {{ inventory_hostname }}."

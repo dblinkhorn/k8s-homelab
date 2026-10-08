@@ -1,0 +1,88 @@
+---
+- name: Verify Kubernetes control-plane state
+  ansible.builtin.stat:
+    path: /etc/kubernetes/admin.conf
+  register: flux_kubeconfig
+
+- name: Require an initialized Kubernetes control plane
+  ansible.builtin.assert:
+    that:
+      - flux_kubeconfig.stat.exists
+    fail_msg: Run the Kubernetes bootstrap before installing Flux.
+
+- name: Download Flux archive
+  ansible.builtin.get_url:
+    url: >-
+      https://github.com/fluxcd/flux2/releases/download/{{ flux_version
+      }}/flux_{{ flux_version | regex_replace('^v', '')
+      }}_linux_amd64.tar.gz
+    dest: "/tmp/flux-{{ flux_version }}-linux-amd64.tar.gz"
+    mode: "0644"
+    checksum: "sha256:{{ flux_checksum }}"
+
+- name: Ensure Flux extract directory exists
+  ansible.builtin.file:
+    path: "/tmp/flux-{{ flux_version }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Extract Flux archive
+  ansible.builtin.unarchive:
+    src: "/tmp/flux-{{ flux_version }}-linux-amd64.tar.gz"
+    dest: "/tmp/flux-{{ flux_version }}"
+    remote_src: true
+    creates: "/tmp/flux-{{ flux_version }}/flux"
+
+- name: Install Flux binary
+  ansible.builtin.copy:
+    src: "/tmp/flux-{{ flux_version }}/flux"
+    dest: /usr/local/bin/flux
+    owner: root
+    group: root
+    mode: "0755"
+    remote_src: true
+
+- name: Verify Flux CLI version
+  ansible.builtin.command: flux --version
+  changed_when: false
+
+- name: Check Flux prerequisites
+  ansible.builtin.command: flux check --pre
+  changed_when: false
+
+- name: Check Flux controller installations
+  ansible.builtin.command: >-
+    kubectl -n {{ flux_namespace }} get deployment/{{ item }}
+  changed_when: false
+  failed_when: false
+  loop: "{{ flux_components }}"
+  register: flux_controller_installations
+
+- name: Install missing Flux controllers
+  ansible.builtin.command:
+    argv:
+      - flux
+      - install
+      - "--namespace={{ flux_namespace }}"
+      - "--version={{ flux_version }}"
+      - "--components={{ flux_components | join(',') }}"
+      - "--cluster-domain={{ kubernetes_dns_domain }}"
+      - "--timeout={{ flux_install_timeout }}"
+  when: >-
+    flux_controller_installations.results
+    | selectattr('rc', 'ne', 0)
+    | list
+    | length > 0
+
+- name: Wait for Flux controllers
+  ansible.builtin.command: >-
+    kubectl -n {{ flux_namespace }} rollout status
+    deployment/{{ item }} --timeout={{ flux_install_timeout }}
+  changed_when: false
+  loop: "{{ flux_components }}"
+
+- name: Verify Flux installation
+  ansible.builtin.command: flux check
+  changed_when: false

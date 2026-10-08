@@ -1,0 +1,7 @@
+---
+- name: Verify Kubernetes node readiness
+  hosts: k8s_nodes
+  gather_facts: false
+  strategy: linear
+  roles:
+    - role: dblinkhorn.k8s_homelab.preflight

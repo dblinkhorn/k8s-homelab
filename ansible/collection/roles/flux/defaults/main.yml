@@ -1,0 +1,12 @@
+---
+kubernetes_dns_domain: cluster.local
+
+flux_version: v2.9.3
+flux_checksum: eae4e8608c0ade2bf4e8dec1669dbb6b0c28b5822b252d97feccfb4fb1181fd2
+flux_namespace: flux-system
+flux_components:
+  - source-controller
+  - kustomize-controller
+  - helm-controller
+  - notification-controller
+flux_install_timeout: 5m

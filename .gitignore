@@ -17,9 +17,12 @@ crash.log
 crash.*.log
 
 # Ansible
-ansible/.ansible/
-ansible/inventory/*.ini
+.ansible/
 *.retry
+
+# Retained ignored local backups from the destroyed development cluster
+/infra/proxmox/
+/ansible/inventory/
 
 # Agent
 AGENTS.md
@@ -28,3 +31,4 @@ scratchpad.md
 
 # OS/editor
 .DS_Store
+__pycache__/

@@ -1,0 +1,15 @@
+---
+- name: Run base VM preflight checks
+  ansible.builtin.import_playbook: dblinkhorn.k8s_homelab.preflight
+
+- name: Prepare base operating system
+  ansible.builtin.import_playbook: dblinkhorn.k8s_homelab.os_prep
+
+- name: Prepare Kubernetes node prerequisites
+  ansible.builtin.import_playbook: dblinkhorn.k8s_homelab.kubernetes_prereqs
+
+- name: Bootstrap Kubernetes cluster
+  ansible.builtin.import_playbook: dblinkhorn.k8s_homelab.kubernetes_bootstrap
+
+- name: Bootstrap Flux
+  ansible.builtin.import_playbook: dblinkhorn.k8s_homelab.flux_bootstrap

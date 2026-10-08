@@ -1,0 +1,18 @@
+---
+namespace: dblinkhorn
+name: k8s_homelab
+version: 0.1.0
+readme: README.md
+authors:
+  - dblinkhorn
+description: Opinionated Kubernetes homelab bootstrap for Proxmox VE.
+tags:
+  - kubernetes
+  - homelab
+  - proxmox
+  - kubeadm
+dependencies: {}
+repository: https://github.com/dblinkhorn/k8s-homelab
+issues: https://github.com/dblinkhorn/k8s-homelab/issues
+build_ignore:
+  - .DS_Store

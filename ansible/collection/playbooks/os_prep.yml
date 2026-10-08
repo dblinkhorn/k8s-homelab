@@ -1,0 +1,7 @@
+---
+- name: Prepare base OS for Kubernetes
+  hosts: k8s_nodes
+  become: true
+  gather_facts: false
+  roles:
+    - role: dblinkhorn.k8s_homelab.os_prep
