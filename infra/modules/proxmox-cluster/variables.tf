@@ -58,13 +58,13 @@ variable "kubernetes_nodes" {
 variable "ubuntu_cloud_image_url" {
   type        = string
   description = "URL of the Ubuntu cloud image used for the base template."
-  default     = "https://cloud-images.ubuntu.com/releases/noble/release-20260518/ubuntu-24.04-server-cloudimg-amd64.img"
+  default     = "https://cloud-images.ubuntu.com/releases/noble/release-20260926/ubuntu-24.04-server-cloudimg-amd64.img"
 }
 
 variable "ubuntu_cloud_image_checksum" {
   type        = string
   description = "SHA256 checksum for the pinned Ubuntu cloud image."
-  default     = "53fdde898feed8b027d94baa9cfe8229867f330a1d9c49dc7d84465ee7f229f7"
+  default     = "6a81c37564db9b1ee84e141922625e1d7c5b389b99bb3c572e0243607d5bb4d2"
 }
 
 variable "ubuntu_cloud_image_file_name_override" {
