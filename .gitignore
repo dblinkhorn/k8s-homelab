@@ -1,30 +1,6 @@
-# Secrets
-.env
-.env.*
-*.tfvars
-*.tfvars.json
-secrets.*
-*.key
-*.pem
-kubeconfig*
-*.kubeconfig
-
-# Terraform
 .terraform/
-terraform.tfstate
-terraform.tfstate.*
-crash.log
-crash.*.log
 
-# Ansible
-.ansible/
-*.retry
-
-# Retained ignored local backups from the destroyed development cluster
-/infra/proxmox/
-/ansible/inventory/
-
-# Agent
+# Local agent notes
 AGENTS.md
 plan.md
 scratchpad.md
