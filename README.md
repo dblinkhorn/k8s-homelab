@@ -21,26 +21,7 @@ The cluster has exactly one control-plane node and at least one worker.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    private["Your private repository"]
-
-    subgraph public [This repository]
-        tofu["OpenTofu module"]
-        ansible["Ansible collection"]
-    end
-
-    subgraph proxmox [Proxmox]
-        vms["Ubuntu node VMs"]
-        cluster["Kubernetes cluster"]
-    end
-
-    private -->|make infra-apply| tofu
-    tofu -->|creates| vms
-    private -->|make cluster-bootstrap| ansible
-    ansible -->|configures| vms
-    vms -->|host| cluster
-```
+![How the private repository uses the OpenTofu module and Ansible collection to build the cluster](docs/how-it-works.svg)
 
 The private repo holds your node definitions and runs the workflow. It uses the OpenTofu module to create VMs, then the Ansible collection to
 bootstrap Kubernetes on those VMs.

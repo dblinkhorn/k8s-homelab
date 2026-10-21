@@ -1,0 +1,19 @@
+%% Render with: mmdc -i docs/how-it-works.mmd -o docs/how-it-works.svg -t dark -b '#0d1117'
+flowchart LR
+    private["Your private repository"]
+
+    subgraph public [This repository]
+        tofu["OpenTofu module"]
+        ansible["Ansible collection"]
+    end
+
+    subgraph proxmox [Proxmox]
+        vms["Ubuntu node VMs"]
+        cluster["Kubernetes cluster"]
+    end
+
+    private -->|make infra-apply| tofu
+    tofu -->|creates| vms
+    private -->|make cluster-bootstrap| ansible
+    ansible -->|configures| vms
+    vms -->|host| cluster
