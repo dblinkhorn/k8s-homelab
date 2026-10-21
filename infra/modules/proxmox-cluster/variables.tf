@@ -32,7 +32,13 @@ variable "ssh_public_key_path" {
 
 variable "dns_servers" {
   type        = list(string)
-  description = "DNS servers configured for cloned node VMs."
+  description = "Optional DNS override for cloned node VMs. Null uses the Proxmox host's DNS settings."
+  default     = null
+
+  validation {
+    condition     = var.dns_servers == null ? true : length(var.dns_servers) > 0
+    error_message = "Set at least one DNS server when overriding the Proxmox host's DNS settings."
+  }
 }
 
 variable "qemu_guest_agent_enabled" {

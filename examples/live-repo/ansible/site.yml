@@ -1,3 +1,0 @@
----
-- name: Bootstrap the homelab cluster
-  ansible.builtin.import_playbook: dblinkhorn.k8s_homelab.site

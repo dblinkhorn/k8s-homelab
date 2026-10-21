@@ -28,6 +28,7 @@ crash.*.log
 AGENTS.md
 plan.md
 scratchpad.md
+future-improvements.md
 
 # OS/editor
 .DS_Store

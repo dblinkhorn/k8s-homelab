@@ -1,5 +1,5 @@
 output "proxmox_version" {
-  description = "Proxmox VE version reported by the API."
+  description = "Proxmox version reported by the API."
   value       = data.proxmox_version.current
 }
 

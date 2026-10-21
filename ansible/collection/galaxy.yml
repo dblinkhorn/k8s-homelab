@@ -5,7 +5,7 @@ version: 0.1.0
 readme: README.md
 authors:
   - dblinkhorn
-description: Opinionated Kubernetes homelab bootstrap for Proxmox VE.
+description: Opinionated Kubernetes homelab bootstrap for Proxmox.
 tags:
   - kubernetes
   - homelab

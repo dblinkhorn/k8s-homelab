@@ -58,8 +58,11 @@ resource "proxmox_virtual_environment_vm" "kubernetes_nodes" {
       keys     = [trimspace(file(pathexpand(var.ssh_public_key_path)))]
     }
 
-    dns {
-      servers = var.dns_servers
+    dynamic "dns" {
+      for_each = var.dns_servers == null ? [] : [1]
+      content {
+        servers = var.dns_servers
+      }
     }
 
     ip_config {
